@@ -11,6 +11,9 @@ type ProjectActionsProps = {
   status: ProjectStatus;
 };
 
+const noRowsAffectedMessage =
+  "No rows updated or deleted. The project may not exist, or RLS blocked the operation.";
+
 export function ProjectActions({ projectId, status }: ProjectActionsProps) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -21,13 +24,21 @@ export function ProjectActions({ projectId, status }: ProjectActionsProps) {
     setIsLoading(true);
 
     const supabase = createClient();
-    const { error: updateError } = await supabase
+    const { data, error: updateError } = await supabase
       .from("projects")
       .update({ status: nextStatus })
-      .eq("id", projectId);
+      .eq("id", projectId)
+      .select("id")
+      .maybeSingle();
 
     if (updateError) {
       setError(updateError.message);
+      setIsLoading(false);
+      return;
+    }
+
+    if (!data) {
+      setError(noRowsAffectedMessage);
       setIsLoading(false);
       return;
     }
@@ -41,13 +52,21 @@ export function ProjectActions({ projectId, status }: ProjectActionsProps) {
     setIsLoading(true);
 
     const supabase = createClient();
-    const { error: deleteError } = await supabase
+    const { data, error: deleteError } = await supabase
       .from("projects")
       .delete()
-      .eq("id", projectId);
+      .eq("id", projectId)
+      .select("id")
+      .maybeSingle();
 
     if (deleteError) {
       setError(deleteError.message);
+      setIsLoading(false);
+      return;
+    }
+
+    if (!data) {
+      setError(noRowsAffectedMessage);
       setIsLoading(false);
       return;
     }
